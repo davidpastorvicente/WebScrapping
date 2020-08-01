@@ -11,6 +11,27 @@ class Hotel(Item):
     desc = Field()
 
 
+def parse_hotel(response):
+    sel = Selector(response)
+    item = ItemLoader(Hotel(), sel)
+
+    item.add_xpath('name', "//h1[@id='HEADING']/text()")
+
+    price = "//div[contains(@class, 'bookableOffer')][1]/@data-pernight"
+    if sel.xpath(price):
+        item.add_xpath('price', price)
+    else:
+        item.add_xpath('price', "//a[contains(@class, 'bookableOffer')][1]/@data-pernight")
+
+    desc = "//div[contains(@data-ssrev-handlers, 'Description')]//p[1]"
+    if sel.xpath(desc):
+        item.add_xpath('desc', desc + "/text()")
+    else:
+        item.add_xpath('desc', "//div[contains(@data-ssrev-handlers, 'Description')]/div/div[1]/text()")
+
+    yield item.load_item()
+
+
 class TripAdvisor(CrawlSpider):
     name = 'XatakaSpider'
     custom_settings = {
@@ -21,23 +42,3 @@ class TripAdvisor(CrawlSpider):
     download_delay = 2
     rules = (Rule(LinkExtractor(allow=r'/Hotel_Review-', restrict_xpaths="//div[contains(@class, 'listing_title')]"),
                   follow=True, callback="parseHotel"),)
-
-    def parseHotel(self, response):
-        sel = Selector(response)
-        item = ItemLoader(Hotel(), sel)
-
-        item.add_xpath('name', "//h1[@id='HEADING']/text()")
-
-        price = "//div[contains(@class, 'bookableOffer')][1]/@data-pernight"
-        if sel.xpath(price):
-            item.add_xpath('price', price)
-        else:
-            item.add_xpath('price', "//a[contains(@class, 'bookableOffer')][1]/@data-pernight")
-
-        desc = "//div[contains(@data-ssrev-handlers, 'Description')]//p[1]"
-        if sel.xpath(desc):
-            item.add_xpath('desc', desc + "/text()")
-        else:
-            item.add_xpath('desc', "//div[contains(@data-ssrev-handlers, 'Description')]/div/div[1]/text()")
-
-        yield item.load_item()

@@ -5,10 +5,22 @@ from scrapy.loader.processors import MapCompose
 from scrapy.loader import ItemLoader
 
 
+def clean_text(txt):
+    return txt.replace('\n', '').replace('\r', '').replace('\t', '').replace('\xa0', ' ').strip()
+
+
 class Article(Item):
     name = Field()
     price = Field()
     desc = Field()
+
+
+def parse_article(response):
+    item = ItemLoader(Article(), response)
+    item.add_xpath('name', "//span[@id='productTitle']/text()", MapCompose(clean_text))
+    item.add_xpath('price', "//span[@id='price_inside_buybox']/text()", MapCompose(clean_text))
+    item.add_xpath('desc', "//div[@id='productDescription']/p/text()", MapCompose(clean_text))
+    yield item.load_item()
 
 
 class Amazon(CrawlSpider):
@@ -26,13 +38,3 @@ class Amazon(CrawlSpider):
         Rule(LinkExtractor(restrict_xpaths="//div[@data-component-type='s-search-result']//h2"),
              follow=True, callback='parseArticle')
     )
-
-    def cleanText(self, txt):
-        return txt.replace('\n', '').replace('\r', '').replace('\t', '').replace('\xa0', ' ').strip()
-
-    def parseArticle(self, response):
-        item = ItemLoader(Article(), response)
-        item.add_xpath('name', "//span[@id='productTitle']/text()", MapCompose(self.cleanText))
-        item.add_xpath('price', "//span[@id='price_inside_buybox']/text()", MapCompose(self.cleanText))
-        item.add_xpath('desc', "//div[@id='productDescription']/p/text()", MapCompose(self.cleanText))
-        yield item.load_item()
